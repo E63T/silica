@@ -1,0 +1,19 @@
+name: silica
+version: 0.1.0
+
+authors:
+  - your-name-here <your-email-here>
+
+targets:
+  silica:
+    main: src/silica.cr
+
+dependencies:
+  version:
+    github: unn4m3d/version
+  silica_core:
+    github: unn4m3d/silica_core
+
+crystal: 1.1.1
+
+license: MIT

@@ -1,0 +1,10 @@
+version: 2.0
+shards:
+  silica_core:
+    git: https://github.com/unn4m3d/silica_core.git
+    version: 0.1.0+git.commit.3be5c1f24ccca75349fc8f608c213cf8c42f6abc
+
+  version:
+    git: https://github.com/unn4m3d/version.git
+    version: 0.1.0
+
