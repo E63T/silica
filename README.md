@@ -1,22 +1,16 @@
 # silica
 
-TODO: Write a description here
-
-## Installation
-
-TODO: Write installation instructions here
+:warning: **EXPERIMENTAL** C++ hardware definition header generator using SVD files 
 
 ## Usage
 
-TODO: Write usage instructions here
-
-## Development
-
-TODO: Write development instructions here
+```bash
+    cat example/STM32F0x2.svd | crystal ./silica.cr > example/test.hpp
+```
 
 ## Contributing
 
-1. Fork it (<https://github.com/your-github-user/silica/fork>)
+1. Fork it (<https://github.com/unn4m3d/silica/fork>)
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
@@ -24,4 +18,4 @@ TODO: Write development instructions here
 
 ## Contributors
 
-- [your-github-user](https://github.com/your-github-user) your-name-here - creator, maintainer
+- [unn4m3d](https://github.com/unn4m3d) your-name-here - creator, maintainer

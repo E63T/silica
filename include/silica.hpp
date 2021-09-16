@@ -19,7 +19,7 @@ namespace silica
 
     struct periph
     {
-        interrupt_handler<interrupt_id> interrupt_handler;
+        interrupt_handler<hw::interrupt_id> interrupt_handler;
         void* user_data;
     };
     
