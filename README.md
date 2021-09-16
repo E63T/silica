@@ -18,4 +18,4 @@
 
 ## Contributors
 
-- [unn4m3d](https://github.com/unn4m3d) your-name-here - creator, maintainer
+- [unn4m3d](https://github.com/unn4m3d) - creator, maintainer
