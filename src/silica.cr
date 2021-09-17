@@ -1,6 +1,7 @@
 require "./silica/generator"
+require "version"
 module Silica
-  VERSION = "0.1.0"
+  VERSION = Version.fetch
 end
 
 Silica::Generator.new(STDIN, SilicaCore::CppGenerator.new(STDOUT)).run!
