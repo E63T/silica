@@ -2,4 +2,7 @@
 /lib/
 /bin/
 /.shards/
-*.dwarf
+*.dwarf/
+/example/include/
+/example/src/hardware_defs.cpp
+
