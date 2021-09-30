@@ -11,7 +11,7 @@
 ## Development
 
 TODO:
-* [ ] Field support
+* [x] Field support (:warning: WIP)
 * [ ] Helper methods
 * [ ] Full `std::hardware` TR implementation
 * [ ] Doc generation
