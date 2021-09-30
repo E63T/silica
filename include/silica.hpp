@@ -15,12 +15,17 @@ namespace silica
     using ptr = T*;
 
     template<typename ID>
-    using interrupt_handler = ptr<void(periph*, ID)>;
+    using interrupt_handler_t = ptr<void(periph*, ID)>;
+
+    struct interrupt_handler
+    {
+        interrupt_handler_t<hw::interrupt_id> handler;
+        void* user_data;
+    };
 
     struct periph
     {
-        interrupt_handler<hw::interrupt_id> interrupt_handler;
-        void* user_data;
+        /* TODO */
     };
     
 
