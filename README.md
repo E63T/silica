@@ -18,6 +18,7 @@ TODO:
 * [ ] Custom IRQ handlers
 * [ ] Configuration options
 * [ ] Examples
+* [ ] Proper logging
 
 ## Contributing
 
