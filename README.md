@@ -8,6 +8,17 @@
     cat example/STM32F0x2.svd | crystal ./silica.cr > example/test.hpp
 ```
 
+## Development
+
+TODO:
+* [ ] Field support
+* [ ] Helper methods
+* [ ] Full `std::hardware` TR implementation
+* [ ] Doc generation
+* [ ] Custom IRQ handlers
+* [ ] Configuration options
+* [ ] Examples
+
 ## Contributing
 
 1. Fork it (<https://github.com/unn4m3d/silica/fork>)
