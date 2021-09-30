@@ -5,7 +5,7 @@
 ## Usage
 
 ```bash
-    cat example/STM32F0x2.svd | crystal ./silica.cr > example/test.hpp
+    cat example/STM32F0x2.svd | crystal run ./silica.cr -- example/ 
 ```
 
 ## Development
