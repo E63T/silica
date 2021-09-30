@@ -5,4 +5,5 @@
 *.dwarf/
 /example/include/
 /example/src/hardware_defs.cpp
+/example/.pio/
 
