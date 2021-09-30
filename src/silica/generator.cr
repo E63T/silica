@@ -86,7 +86,6 @@ module Silica
                     emit "MAX_VALUE", no_sep: true
                 end
 
-                puts "\tGenerating IRQ handler table"
 
                 src_dir = File.expand_path File.join(@out_dir, "src")
                 Dir.mkdir_p src_dir
@@ -96,28 +95,37 @@ module Silica
 
                 # TODO : Use template
                 File.open(irq_impl_path, "w") do |irq_impl|
-                    puts "\t\tGenerating #{irq_impl_path}"
+                    irq_gen = @gen.class.new irq_impl
+                    puts "Generating #{irq_impl_path}"
+                    puts "\tGenerating IRQ handler table"
                     top_claim irq_impl
-                    irq_impl.puts "#include <silica.hpp>"
-                    irq_impl.puts "#include <detail/hardware_defs.hpp>"
-                    irq_impl.puts
-                    irq_impl.puts "namespace hw { extern silica::interrupt_handler irq_handlers[(int)interrupt_id::MAX_VALUE] = {{0, 0}}; }"
-                end
+                    irq_gen.require_file "silica.hpp"
+                    irq_gen.require_file "detail/hardware_defs.hpp"
+                    irq_gen.separator
+                    #irq_impl.puts "namespace hw { extern silica::interrupt_handler irq_handlers[(int)interrupt_id::MAX_VALUE] = {{0, 0}}; }"
+                    irq_gen.block "namespace hw" do 
+                        emit "extern silica::interrupt_handler irq_handlers[(int)interrupt_id::MAX_VALUE] = {{0,0}}"
+                    
 
-                puts "\tGenerating IRQ handlers"
-                @interrupts.each do |iname, _|
-                    @gen.separator
+                        puts "\tGenerating IRQ handlers"
+                        @interrupts.each do |iname, _|
+                            irq_gen.separator
 
-                    @gen.block %(extern "C" void #{iname}_IRQ_Handler()) do 
-                        emit "std::uint32_t irq_idx = (uint32_t)interrupt_id::#{iname}"
-                        block %(if(irq_handlers[irq_idx].handler)) do
-                            emit %(irq_handlers[irq_idx].handler(irq_handler[irq_idx].user_data, interrupt_id::#{iname}))
+                            irq_gen.block %(extern "C" void #{iname}_IRQ_Handler()) do 
+                                emit "std::uint32_t irq_idx = (uint32_t)interrupt_id::#{iname}"
+                                block %(if(irq_handlers[irq_idx].handler)) do
+                                    emit %(irq_handlers[irq_idx].handler(irq_handlers[irq_idx].user_data, interrupt_id::#{iname}))
+                                end
+                            end
                         end
                     end
+
+                    irq_gen.close
                 end
             end
 
             @gen.close
+            @gen_iohw.close
         end
 
         def auto_constant(node : XML::Node)
@@ -307,8 +315,10 @@ module Silica
                     separator
 
                     
-                    block "enum class #{reg_name}_v", separator: true do
+                    block "enum class #{reg_name}_v : uint#{@width}_t", separator: true do
                         reg_enum_values = {} of String => String
+
+                        declared_values = [] of String
                         reg.xpath_nodes("fields/field").each do |field|
                             field_name = field.xpath_node("name").not_nil!.text
                             field_width = parse_number field.xpath_node("bitWidth").not_nil!.text
@@ -328,13 +338,19 @@ module Silica
                                 end
 
                                 values.each do |value|
-                                    emit "#{field_name}_#{value[:name]} = #{value[:value]},", no_sep: true
+                                    value_name = "#{field_name}_#{value[:name]}"
+                                    unless declared_values.includes? value_name
+                                        declared_values << value_name
+                                        emit "#{value_name.delete("()")} = #{value[:value]},", no_sep: true
+                                    end
                                 end
                             end
                         end
 
                         reg_enum_values.each do |k, v|
-                            emit "#{k} = #{v},", no_sep: true
+                            unless declared_values.includes? k
+                                emit "#{k} = #{v},", no_sep: true
+                            end
                         end
 
                         emit "NONE = 0", no_sep: true

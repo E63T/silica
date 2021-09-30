@@ -55,7 +55,7 @@ namespace std
         struct register_traits
         {
             typedef ::ioreg_t value_type;
-            typedef hw_base::static_address<0> address_holder;
+            typedef static_address<0> address_holder;
 
             enum
             {
@@ -67,7 +67,7 @@ namespace std
         template<hw_base::address_type Addr>
         struct static_register_traits : register_traits
         {
-            typedef hw_base::static_address<Addr> address_holder;
+            typedef static_address<Addr> address_holder;
         };
 
         template<

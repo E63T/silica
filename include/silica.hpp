@@ -15,7 +15,7 @@ namespace silica
     using ptr = T*;
 
     template<typename ID>
-    using interrupt_handler_t = ptr<void(periph*, ID)>;
+    using interrupt_handler_t = ptr<void(void*, ID)>;
 
     struct interrupt_handler
     {
