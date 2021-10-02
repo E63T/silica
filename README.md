@@ -19,6 +19,7 @@ TODO:
 * [ ] Configuration options
 * [ ] Examples
 * [ ] Proper logging
+* [ ] Fix C++ warnings
 
 ## Contributing
 

@@ -23,10 +23,10 @@ int main()
     ahbenr |= (std::uint32_t)hw::periph::rcc::ahbenr_v::IOPCEN_Enabled;
 
     moder |= (std::uint32_t)hw::periph::gpioc::moder_v::MODER8_Output;
+
     while(true)
     {
         ms_delay(500);
         odr ^= 1 << 8;
     }
-
 }

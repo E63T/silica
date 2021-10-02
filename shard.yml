@@ -13,7 +13,7 @@ dependencies:
     github: unn4m3d/version
   silica_core:
     github: unn4m3d/silica_core
-    version: ~> 0.1.0
+    branch: master
 
 crystal: 1.1.1
 

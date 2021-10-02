@@ -1,0 +1,21 @@
+#include <silica.hpp>
+#include <detail/hardware_defs.hpp>
+
+namespace hw
+{
+    /* Interrupt handler declaration */
+    extern silica::interrupt_handler irq_handlers[(int)interrupt_id::MAX_VALUE] = {{0,0}};
+
+    /* IRQ Handlers */
+
+    <% @irq_names.each do |irq_name| %>
+        
+        /* Handler for <%=irq_name%> */ 
+        extern "C" void <%=irq_name%>_IRQ_Handler()
+        {
+            std::uint32_t irq_idx = (std::uint32_t)interrupt_id::<%=irq_name%>;
+            if(irq_handlers[irq_idx].handler)
+                irq_handlers[irq_idx].handler(irq_handlers[irq_idx].user_data, interrupt_id::<%=irq_name%>);
+        } 
+    <% end %> 
+}
