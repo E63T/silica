@@ -357,8 +357,17 @@ module Silica
                             field_width = parse_number field.xpath_node("bitWidth").not_nil!.text
                             field_offset = parse_number field.xpath_node("bitOffset").not_nil!.text
 
-                            g_enum_member "#{field_name}_msk", mask_for(field_width, field_offset)
-                            g_enum_member "#{field_name}_offset", "#{field_offset}"
+                            if @config.features.field_masks
+                                g_enum_member "#{field_name}_msk", mask_for(field_width, field_offset)
+                            end
+
+                            if @config.features.field_offsets
+                                g_enum_member "#{field_name}_offset", field_offset.to_s
+                            end
+
+                            if @config.features.field_widths
+                                g_enum_member "#{field_name}_width", field_width.to_s
+                            end
 
                             field.xpath_nodes("enumeratedValues").each do |value_set|
                                 value_set_name = value_set.xpath_node("name").try(&.text)
@@ -380,9 +389,11 @@ module Silica
                             end
                         end
 
-                        reg_enum_values.each do |k, v|
-                            unless declared_values.includes? k
-                                g_enum_member k, v
+                        if @config.features.field_common_values
+                            reg_enum_values.each do |k, v|
+                                unless declared_values.includes? k
+                                    g_enum_member k, v
+                                end
                             end
                         end
 
