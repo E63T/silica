@@ -137,6 +137,13 @@ module Silica
 
                 puts "\tGenerating interrupt ID enumeration"
 
+                if @config.features.doxygen
+                    @gen.doc do |d|
+                        d.generate do 
+                            summary "Interrupt ID"
+                        end
+                    end
+                end
                 @gen.g_enum "interrupt_id" do
                     @interrupts.each do |iname, _|
                         g_enum_member iname
@@ -149,6 +156,7 @@ module Silica
                 Dir.mkdir_p src_dir
 
                 irq_impl_path = File.expand_path File.join(src_dir, "hardware_defs.cpp")
+
                 @gen.emit "extern silica::interrupt_handler irq_handlers[(int)interrupt_id::MAX_VALUE]"
 
                 # TODO : Use template
@@ -170,7 +178,9 @@ module Silica
             prev = node.previous_sibling
 
             unless prev.nil?
-                @gen.doc { |d| d.brief prev.to_s } if prev.comment?
+                if @config.features.doxygen
+                    @gen.doc { |d| d.summary prev.to_s } if prev.comment?
+                end
             end
 
             text = node.text
@@ -201,6 +211,8 @@ module Silica
             r_width = parse_number xml.xpath_node("/device/width").not_nil!.text
 
             iohw_template = IoHwTemplate.new r_width, a_width
+
+            @width = r_width
 
             iohw_template.to_s @gen_iohw.io
  
@@ -321,6 +333,19 @@ module Silica
                 @interrupts[iname] = name 
             end
 
+
+            if @config.features.doxygen
+                @gen.doc do |d|
+                    d.generate do
+                        desc = p.xpath_node("description")
+                        if desc.nil?
+                            summary name.upcase
+                        else
+                            summary desc.text
+                        end
+                    end
+                end
+            end
             @gen.g_module name, [(derived_from.nil? ? "silica::periph" : derived_from.downcase)] do
                 base_addr = parse_number(p.xpath_node("baseAddress").not_nil!.text)
                 p.xpath_nodes("self::peripheral/registers/*").each do |reg|
@@ -335,6 +360,19 @@ module Silica
 
                     traits = generic(path(%w(std hardware static_register_traits)), [(base_addr + offset).to_s])
 
+                    if @config.features.doxygen
+                        doc do |d|
+                            d.generate do
+                                desc = reg.xpath_node("description")
+                                summary "Register traits for #{name}.#{reg_name}"
+                                
+                                unless desc.nil?
+                                    separator
+                                    summary desc.text
+                                end
+                            end
+                        end
+                    end
                     if size == @width
                         g_alias "#{reg_name}_traits", traits
                     else
@@ -343,30 +381,93 @@ module Silica
                         end
                     end
 
+                    if @config.features.doxygen
+                        separator
+
+                        doc do |d|
+                            d.generate do
+                                desc = reg.xpath_node("description")
+                                summary "Register access for #{name}.#{reg_name}"
+                                
+                                unless desc.nil?
+                                    separator
+                                    summary desc.text
+                                end
+                            end
+                        end
+                    end
+
                     g_alias escape_keywords(reg_name), generic(path(%w(std hardware register_access)), "#{reg_name}_traits")
                     
                     separator
 
-                    
+                    if @config.features.doxygen
+                        doc do |d|
+                            d.generate do 
+                                d.summary "Values and masks for #{name}.#{reg_name}"
+                            end
+                        end
+                    end
                     g_enum "#{reg_name}_v" , "uint#{@width}_t" do
-                        reg_enum_values = {} of String => String
+                        reg_enum_values = {} of String => EnumeratedValue
 
                         declared_values = [] of String
                         reg.xpath_nodes("fields/field").each do |field|
                             field_name = field.xpath_node("name").not_nil!.text
                             field_width = parse_number field.xpath_node("bitWidth").not_nil!.text
                             field_offset = parse_number field.xpath_node("bitOffset").not_nil!.text
+                            field_desc = field.xpath_node("description")
 
                             if @config.features.field_masks
-                                g_enum_member "#{field_name}_msk", mask_for(field_width, field_offset)
+                                g_enum_member "#{field_name}_msk", mask_for(field_width, field_offset) do 
+                                    if @config.features.doxygen
+                                        doc do |d|
+                                            d.generate do 
+                                                summary "Mask for #{field_name}"
+
+                                                field_desc.try do |f|
+                                                    separator
+                                                    summary "Field description: #{f.text}"
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
                             end
 
                             if @config.features.field_offsets
-                                g_enum_member "#{field_name}_offset", field_offset.to_s
+                                g_enum_member "#{field_name}_offset", field_offset.to_s do 
+                                    if @config.features.doxygen
+                                        doc do |d|
+                                            d.generate do 
+                                                summary "Offset of #{field_name}"
+
+                                                field_desc.try do |f|
+                                                    separator
+                                                    summary "Field description: #{f.text}"
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
                             end
 
                             if @config.features.field_widths
-                                g_enum_member "#{field_name}_width", field_width.to_s
+                                
+                                g_enum_member "#{field_name}_width", field_width.to_s do 
+                                    if @config.features.doxygen
+                                        doc do |d|
+                                            d.generate do 
+                                                summary "Width of #{field_name}"
+    
+                                                field_desc.try do |f|
+                                                    separator
+                                                    summary "Field description: #{f.text}"
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
                             end
 
                             field.xpath_nodes("enumeratedValues").each do |value_set|
@@ -375,7 +476,7 @@ module Silica
                                
                                 unless value_set_name.nil?
                                     values.each do |value|
-                                        reg_enum_values["#{value_set_name}_#{value[:name]}"] = value[:value] 
+                                        reg_enum_values["#{value_set_name}_#{value[:name]}"] = value 
                                     end
                                 end
 
@@ -383,7 +484,15 @@ module Silica
                                     value_name = "#{field_name}_#{value[:name]}"
                                     unless declared_values.includes? value_name
                                         declared_values << value_name
-                                        g_enum_member value_name.delete("()"), value[:value]
+                                        g_enum_member(value_name.delete("()"), value[:value]) do 
+                                            if @config.features.doxygen
+                                                doc do |d|
+                                                    d.generate do 
+                                                        summary value[:description]
+                                                    end
+                                                end
+                                            end
+                                        end
                                     end
                                 end
                             end
@@ -392,7 +501,13 @@ module Silica
                         if @config.features.field_common_values
                             reg_enum_values.each do |k, v|
                                 unless declared_values.includes? k
-                                    g_enum_member k, v
+                                    g_enum_member(k, v[:value]) do 
+                                        if @config.features.doxygen
+                                            doc do |d|
+                                                d.summary v[:description]
+                                            end
+                                        end
+                                    end
                                 end
                             end
                         end
@@ -403,6 +518,15 @@ module Silica
                     separator
                 end
 
+                separator
+
+                if @config.features.doxygen
+                    doc do |d|
+                        d.generate do 
+                            summary "Base address of #{name}"
+                        end
+                    end
+                end
                 g_constant "std::uint#{@width}_t", "base_address", "0x#{base_addr.to_s(16)}"
             end
         end

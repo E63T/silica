@@ -34,7 +34,7 @@ Then
 ## Development
 
 TODO:
-* [x] Field support (:warning: WIP)
+* [x] Field support
   * [x] Field value enumerations
   * [x] Field masks 
   * [x] Field offsets
@@ -42,12 +42,12 @@ TODO:
   * [x] Common values within a register (:warning: WIP)
 * [ ] Helper methods
 * [ ] Full `std::hardware` TR implementation
-* [ ] Doc generation
+* [x] Doc generation (:warning: WIP) 
 * [ ] Custom IRQ handlers
 * [x] Configuration options (:warning: WIP)
   * [x] Feature support 
     * [x] Optionally turn off field widths, masks, offsets and common values
-    * [ ] Docs
+    * [x] Docs
     * [ ] Copy includes  
 * [ ] Examples
 * [ ] Tests
