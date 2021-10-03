@@ -11,6 +11,7 @@ module Silica
             property field_widths = true
             property field_offsets = true
             property field_common_values = true
+            property auto_enabled_value = false
 
             def initialize
             end

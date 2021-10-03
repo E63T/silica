@@ -17,16 +17,16 @@ int main()
     __libc_init_array();
 
     auto ahbenr = hw::periph::rcc::ahbenr();
-    auto moder = hw::periph::gpioc::moder();
-    auto odr = hw::periph::gpioc::odr();
+    auto moder = hw::periph::gpioa::moder();
+    auto odr = hw::periph::gpioa::odr();
 
-    ahbenr |= (std::uint32_t)hw::periph::rcc::ahbenr_v::IOPCEN_Enabled;
+    ahbenr |= (std::uint32_t)hw::periph::rcc::ahbenr_v::IOPAEN_Enabled;
 
-    moder |= (std::uint32_t)hw::periph::gpioc::moder_v::MODER8_Output;
+    moder |= 1 << (std::uint32_t)hw::periph::gpioc::moder_v::MODER0_offset;
 
     while(true)
     {
         ms_delay(500);
-        odr ^= 1 << 8;
+        odr ^= 1 << 0;
     }
 }

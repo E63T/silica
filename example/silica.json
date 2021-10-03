@@ -1,12 +1,22 @@
 {
-    "default_env" : "stm32f0x2",
+    "default_env" : "stm32f030",
     "envs" : {
         "stm32f0x2" : {
             "silica_version" : "~> 0.1.0",
             "input_file" : "STM32F0x2.svd",
+            "include_dir" : "include/stm32/f0/f0x2",
+            "src_dir" : "src/stm32/f0/f0x2",
             "features" : {
                 "copy_includes" : false,
                 "field_common_values" : false
+            }
+        },
+        "stm32f030": {
+            "input_file" : "STM32F030.svd",
+            "include_dir" : "include/stm32/f0/f030",
+            "src_dir" : "src/stm32/f0/f030",
+            "features" : {
+                "auto_enabled_value" : true
             }
         }
     }

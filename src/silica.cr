@@ -13,11 +13,11 @@ env : String? = nil
 
 OptionParser.parse do |opt|
   opt.banner = "Usage : silica [-fFILE ][-cFILE ][-v ] OUTPUT_DIR"
-  opt.on("-fFILE", "--input-file=FILE", "Specify input file (override config)") do |f|
+  opt.on("-f FILE", "--input-file=FILE", "Specify input file (override config)") do |f|
     input_file = File.open f
   end
 
-  opt.on("-cFILE", "--config=FILE", "Specify config file (OUTPUT/silica.json by default)") do |f|
+  opt.on("-c FILE", "--config=FILE", "Specify config file (OUTPUT/silica.json by default)") do |f|
     config_file = f
   end
 
@@ -29,17 +29,17 @@ OptionParser.parse do |opt|
     verbose = false
   end
 
-  opt.on("-eENV", "--env=ENV", "Specify environment") do |e|
+  opt.on("-e ENV", "--env=ENV", "Specify environment") do |e|
     env = e
   end
 
   opt.on("-h", "--help", "Print help") do 
     puts opt 
     exit
-  end
+  end 
 end
 
-output_dir = ARGV.shift
+output_dir = ARGV.pop
 
 config_file = config_file || File.join output_dir, "silica.json"
 
