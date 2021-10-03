@@ -2,22 +2,79 @@ require "xml"
 require "silica_core"
 require "./iohw_template"
 require "./hardware_defs_template"
+require "./config"
+require "version/requirement_set"
 
 module Silica
     class Generator
         @gen : SilicaCore::Generator
         @gen_iohw : SilicaCore::Generator
+        @config_set : ConfigFile = ConfigFile.new
+        @env : String
+        @config : Config
 
         def initialize(
-                @in : IO, 
+                io : IO?, 
                 generator_class : SilicaCore::Generator.class, 
-                @out_dir : String
-            )           
-            @width = 32u64
-            @hardware_defs_path = File.expand_path File.join(@out_dir, "include/detail/hardware_defs.hpp")
-            @iohw_path = File.expand_path File.join(@out_dir, "include/iohw.h")
+                @out_dir : String,
+                @config_path : String,
+                env : String?,
+                @verbose : Bool = true
+            )        
 
-            Dir.mkdir_p File.join(@out_dir, "include/detail") unless File.exists? File.join(@out_dir, "detail")
+            if File.exists? @config_path
+                File.open(@config_path) do |file|
+                    @config_set = ConfigFile.from_json file
+                end
+            else
+                raise "Config file #{@config_path} does not exist"
+            end
+
+            @env = env || if @config_set.default_env.empty?
+                    raise "Default env is empty or not specified, please specify it or use --env=ENV"
+                else
+                    @config_set.default_env     
+                end
+
+            @config = @config_set.envs[@env]
+
+            @width = 32u64
+
+            unless @config.silica_version.nil?
+                req_set = Version::RequirementSet.parse @config.silica_version.not_nil!
+
+                unless req_set.matches? VERSION
+                    raise "Silica v#{VERSION} does not match version requirement #{@config.silica_version}"
+                end
+            end
+
+            unless @config.silica_core_version.nil?
+                req_set = Version::RequirementSet.parse @config.silica_core_version.not_nil!
+
+                unless req_set.matches? SilicaCore::VERSION
+                    raise "SilicaCore v#{SilicaCore::VERSION} does not match version requirement #{@config.silica_version}"
+                end
+            end
+
+            @in = if io.nil?
+                if @config.input_file.nil? || @config.input_file.not_nil!.empty?
+                    raise "Input file is not specified"
+                else
+                    File.open File.expand_path File.join(@out_dir, @config.input_file.not_nil!)
+                end
+            else
+                io.not_nil!
+            end
+
+            @out_dir = File.expand_path @out_dir
+            @include_dir = File.join @out_dir, @config.include_dir
+            @src_dir = File.join @out_dir, @config.src_dir
+
+
+            @hardware_defs_path = File.expand_path File.join(@include_dir, "/detail/hardware_defs.hpp")
+            @iohw_path = File.expand_path File.join(@include_dir, "iohw.h")
+
+            Dir.mkdir_p File.join(@include_dir, "detail") unless File.exists? File.join(@include_dir, "detail")
             @gen = generator_class.new File.open(@hardware_defs_path, "w")
             @gen_iohw = generator_class.new File.open(@iohw_path, "w")
         end

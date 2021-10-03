@@ -1,0 +1,12 @@
+{
+    "default_env" : "stm32f0x2",
+    "envs" : {
+        "stm32f0x2" : {
+            "silica_version" : "~> 0.1.0",
+            "input_file" : "STM32F0x2.svd",
+            "features" : {
+                "copy_includes" : false
+            }
+        }
+    }
+}

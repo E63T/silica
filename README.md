@@ -16,11 +16,12 @@ TODO:
 * [ ] Full `std::hardware` TR implementation
 * [ ] Doc generation
 * [ ] Custom IRQ handlers
-* [ ] Configuration options
+* [ ] Configuration options (:warning: WIP)
 * [ ] Examples
 * [ ] Proper logging
 * [ ] Fix C++ warnings
 * [ ] Remove unnecessary XPaths
+* [ ] Exception handling
 
 ## Contributing
 
