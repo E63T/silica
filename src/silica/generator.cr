@@ -258,8 +258,6 @@ module Silica
 
             derived_from = p["derivedFrom"]?
 
-            skip_class = p.xpath_nodes("self::peripheral/*[not(self::name or self::baseAddress or self::interrupt)]").empty?
-
             interrupts = p.xpath_nodes("self::peripheral/interrupt")
             interrupts.each do |node|
                 iname = node.xpath_node("name").not_nil!.text
