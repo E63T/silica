@@ -9,6 +9,7 @@ module Silica
             property doxygen = true
             property field_masks = true
             property field_widths = true
+            property field_offsets = true
             property field_common_values = true
 
             def initialize
