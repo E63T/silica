@@ -137,6 +137,13 @@ module Silica
 
                 puts "\tGenerating interrupt ID enumeration"
 
+                if @config.features.doxygen
+                    @gen.doc do |d|
+                        d.generate do 
+                            summary "Interrupt ID"
+                        end
+                    end
+                end
                 @gen.g_enum "interrupt_id" do
                     @interrupts.each do |iname, _|
                         g_enum_member iname
@@ -149,6 +156,7 @@ module Silica
                 Dir.mkdir_p src_dir
 
                 irq_impl_path = File.expand_path File.join(src_dir, "hardware_defs.cpp")
+
                 @gen.emit "extern silica::interrupt_handler irq_handlers[(int)interrupt_id::MAX_VALUE]"
 
                 # TODO : Use template
@@ -170,7 +178,9 @@ module Silica
             prev = node.previous_sibling
 
             unless prev.nil?
-                @gen.doc { |d| d.brief prev.to_s } if prev.comment?
+                if @config.features.doxygen
+                    @gen.doc { |d| d.summary prev.to_s } if prev.comment?
+                end
             end
 
             text = node.text
@@ -201,6 +211,8 @@ module Silica
             r_width = parse_number xml.xpath_node("/device/width").not_nil!.text
 
             iohw_template = IoHwTemplate.new r_width, a_width
+
+            @width = r_width
 
             iohw_template.to_s @gen_iohw.io
  
