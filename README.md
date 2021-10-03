@@ -20,6 +20,7 @@ TODO:
 * [ ] Examples
 * [ ] Proper logging
 * [ ] Fix C++ warnings
+* [ ] Remove unnecessary XPaths
 
 ## Contributing
 
