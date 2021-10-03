@@ -2,22 +2,52 @@
 
 :warning: **EXPERIMENTAL** C++ hardware definition header generator using SVD files 
 
+Also contains some useful headers for embedded development
+
 ## Usage
 
+:warning: This section is incomplete
+
+Create a file named `silica.json` inside a desired output folder (in this example, the output folder is `example`). Example follows.
+
+```json
+{
+    "default_env" : "stm32f0x2",
+    "envs" : {
+        "stm32f0x2" : {
+            "silica_version" : "~> 0.1.0",
+            "input_file" : "STM32F0x2.svd",
+            "features" : {
+                "copy_includes" : false
+            }
+        }
+    }
+}
+```
+
+Then 
+
 ```bash
-    cat example/STM32F0x2.svd | crystal run ./silica.cr -- example/ 
+    crystal run ./src/silica.cr -- example
 ```
 
 ## Development
 
 TODO:
 * [x] Field support (:warning: WIP)
+  * [x] Field value enumerations
+  * [x] Field masks 
+  * [x] Field offsets
+  * [ ] Field widths
+  * [x] Common values within a register (:warning: WIP)
 * [ ] Helper methods
 * [ ] Full `std::hardware` TR implementation
 * [ ] Doc generation
 * [ ] Custom IRQ handlers
-* [ ] Configuration options (:warning: WIP)
+* [x] Configuration options (:warning: WIP)
+  * [ ] Feature support 
 * [ ] Examples
+* [ ] Tests
 * [ ] Proper logging
 * [ ] Fix C++ warnings
 * [ ] Remove unnecessary XPaths
