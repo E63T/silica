@@ -38,14 +38,17 @@ TODO:
   * [x] Field value enumerations
   * [x] Field masks 
   * [x] Field offsets
-  * [ ] Field widths
+  * [x] Field widths
   * [x] Common values within a register (:warning: WIP)
 * [ ] Helper methods
 * [ ] Full `std::hardware` TR implementation
 * [ ] Doc generation
 * [ ] Custom IRQ handlers
 * [x] Configuration options (:warning: WIP)
-  * [ ] Feature support 
+  * [x] Feature support 
+    * [x] Optionally turn off field widths, masks, offsets and common values
+    * [ ] Docs
+    * [ ] Copy includes  
 * [ ] Examples
 * [ ] Tests
 * [ ] Proper logging
