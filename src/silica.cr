@@ -21,11 +21,11 @@ OptionParser.parse do |opt|
     config_file = f
   end
 
-  opt.on("-v", "--verbose", "Verbose mode (default)") do 
+  opt.on("-v", "--verbose", "Verbose mode (default)") do
     verbose = true
   end
 
-  opt.on("-q", "--quiet", "Quiet mode") do 
+  opt.on("-q", "--quiet", "Quiet mode") do
     verbose = false
   end
 
@@ -33,10 +33,10 @@ OptionParser.parse do |opt|
     env = e
   end
 
-  opt.on("-h", "--help", "Print help") do 
-    puts opt 
+  opt.on("-h", "--help", "Print help") do
+    puts opt
     exit
-  end 
+  end
 end
 
 output_dir = ARGV.pop
