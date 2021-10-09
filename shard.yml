@@ -2,7 +2,7 @@ name: silica
 version: 0.1.0
 
 authors:
-  - your-name-here <your-email-here>
+  - unn4m3d <smelnikov871@gmail.com>
 
 targets:
   silica:
@@ -13,6 +13,9 @@ dependencies:
     github: unn4m3d/version
   silica_core:
     github: unn4m3d/silica_core
+    branch: master
+  nya_serializable:
+    github: nya-engine/nya_serializable
     branch: master
 
 crystal: 1.1.1
