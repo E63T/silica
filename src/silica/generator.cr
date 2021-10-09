@@ -4,6 +4,7 @@ require "./iohw_template"
 require "./hardware_defs_template"
 require "./config"
 require "version/requirement_set"
+require "nya_serializable"
 
 module Silica
   class Generator
@@ -536,16 +537,9 @@ module Silica
       end
     end
 
+    # DEPRECATED: Use `Nya::Serializable.parse_number(text, UInt64)`
     def parse_number(text : String)
-      if text.starts_with? "0x"
-        text.lchop("0x").to_u64(16)
-      elsif text.starts_with? "0b"
-        text.lchop("0b").to_u64(2)
-      elsif text.starts_with? "0"
-        text.to_u64(8)
-      else
-        text.to_u64
-      end
+      Nya::Serializable.parse_number(text, UInt64)
     end
   end
 end
