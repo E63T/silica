@@ -1,10 +1,5 @@
 require "./silica/generator"
-require "version"
 require "option_parser"
-
-module Silica
-  VERSION = Version.fetch
-end
 
 input_file = nil
 config_file = nil

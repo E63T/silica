@@ -1,2 +1,2 @@
 require "spec"
-require "../src/silica"
+require "../src/silica/generator"

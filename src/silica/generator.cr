@@ -5,6 +5,7 @@ require "./hardware_defs_template"
 require "./config"
 require "version/requirement_set"
 require "nya_serializable"
+require "./version"
 
 module Silica
   class Generator
