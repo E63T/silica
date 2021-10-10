@@ -55,6 +55,7 @@ TODO:
 * [ ] Fix C++ warnings
 * [ ] Remove unnecessary XPaths
 * [ ] Exception handling
+* [ ] Peripheral groups support
 
 ## Contributing
 
