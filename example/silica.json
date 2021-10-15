@@ -1,5 +1,5 @@
 {
-    "default_env" : "stm32f030",
+    "default_env" : "stm32f0x2",
     "envs" : {
         "stm32f0x2" : {
             "silica_version" : "~> 0.1.0",
