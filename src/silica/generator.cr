@@ -1,19 +1,24 @@
-require "xml"
-require "silica_core"
-require "./iohw_template"
-require "./hardware_defs_template"
-require "./config"
-require "version/requirement_set"
 require "nya_serializable"
+require "silica_core"
+require "version/requirement_set"
+require "xml"
+require "./config"
+require "./hardware_defs_template"
+require "./iohw_template"
+require "./layout/device"
 require "./version"
 
 module Silica
   class Generator
-    @gen : SilicaCore::Generator
-    @gen_iohw : SilicaCore::Generator
-    @config_set : ConfigFile = ConfigFile.new
-    @env : String
-    @config : Config
+    property gen : SilicaCore::Generator
+    property gen_iohw : SilicaCore::Generator
+    property config_set : ConfigFile = ConfigFile.new
+    property env : String
+    property config : Config
+    property device = Layout::Device.new
+    property interrupts = {} of String => String
+    property width = 32u32
+    property src_dir : String
 
     def initialize(
       io : IO?,
@@ -44,8 +49,6 @@ module Silica
       puts "Env: #{@env}, $env : #{env}"
 
       @config = @config_set.envs[@env]
-
-      @width = 32u64
 
       unless @config.silica_version.nil?
         req_set = Version::RequirementSet.parse @config.silica_version.not_nil!
@@ -115,6 +118,10 @@ module Silica
       puts "Parsing SVD file"
       xml = XML.parse @in
 
+      @device = Layout::Device.deserialize xml.xpath_node("device").not_nil!
+      
+      @width = device.width
+
       puts "Generating #{@hardware_defs_path}"
       @gen.include_guard
       @gen.require_support
@@ -127,420 +134,30 @@ module Silica
         d.brief "Hardware description"
       end
 
-      xml.xpath_node("/device/width").try do |w|
-        @width = parse_number w.text
+      device.pre_generate self
+      device.generate self
+
+      Dir.mkdir_p @src_dir
+
+      irq_impl_path = File.expand_path File.join(@src_dir, "hardware_defs.cpp")  
+
+      File.open(irq_impl_path, "w") do |irq_impl|
+        puts "Generating #{irq_impl_path}"
+        puts "\tGenerating IRQ handlers"
+        top_claim irq_impl
+
+        HardwareDefsTemplate.new(@interrupts.keys).to_s(irq_impl)
       end
 
-      @gen.namespace "hw" do
-        puts "\tGenerating CPU info"
-        generate_cpu! xml
-        puts "\tGenerating platform info"
-        generate_platform! xml
-        puts "\tGenerating peripheral info"
-        generate_periph! xml
+      a_width = device.address_unit_bits.to_u64
+      r_width = device.width.to_u64
 
-        @gen.separator
+      iohw_t = IoHwTemplate.new r_width,a_width
 
-        puts "\tGenerating interrupt ID enumeration"
-
-        if @config.features.doxygen
-          @gen.doc do |d|
-            d.generate do
-              summary "Interrupt ID"
-            end
-          end
-        end
-        @gen.g_enum "interrupt_id" do
-          @interrupts.each do |iname, _|
-            g_enum_member iname
-          end
-          g_enum_member "MAX_VALUE"
-        end
-
-        Dir.mkdir_p @src_dir
-
-        irq_impl_path = File.expand_path File.join(@src_dir, "hardware_defs.cpp")
-
-        @gen.emit "extern silica::interrupt_handler irq_handlers[(int)interrupt_id::MAX_VALUE]"
-
-        # TODO : Use template
-        File.open(irq_impl_path, "w") do |irq_impl|
-          puts "Generating #{irq_impl_path}"
-          puts "\tGenerating IRQ handlers"
-          top_claim irq_impl
-
-          HardwareDefsTemplate.new(@interrupts.keys).to_s(irq_impl)
-        end
-      end
+      iohw_t.to_s @gen_iohw.io
 
       @gen.close
       @gen_iohw.close
-    end
-
-    def auto_constant(node : XML::Node)
-      prev = node.previous_sibling
-
-      unless prev.nil?
-        if @config.features.doxygen
-          @gen.doc { |d| d.summary prev.to_s } if prev.comment?
-        end
-      end
-
-      text = node.text
-      case text
-      when "big", "little"
-        @gen.constant "auto", node.name.underscore, "silica::endian::#{text}"
-      when "true", "false", /^[0-9]+$/, /^0x[0-9a-fA-F]+$/
-        @gen.constant "auto", node.name.underscore, text
-      else
-        @gen.constant "char*", node.name.underscore, @gen.escape(text)
-      end
-    end
-
-    def auto_constant(node : Nil)
-    end
-
-    def generate_cpu!(xml)
-      @gen.namespace "cpu" do
-        xml.xpath_nodes("/device/cpu/*").each do |node|
-          auto_constant node
-        end
-      end
-    end
-
-    def generate_platform!(xml)
-      puts "\t\tGenerating #{@iohw_path}"
-      a_width = parse_number xml.xpath_node("/device/addressUnitBits").not_nil!.text
-      r_width = parse_number xml.xpath_node("/device/width").not_nil!.text
-
-      iohw_template = IoHwTemplate.new r_width, a_width
-
-      @width = r_width
-
-      iohw_template.to_s @gen_iohw.io
-
-      %w(name description version width addressUnitBits size resetMask resetValue).each do |word|
-        auto_constant xml.xpath_node("/device/#{word}")
-      end
-    end
-
-    @peripherals = {} of String => Tuple(UInt64, String)
-
-    def generate_periph!(xml)
-      @gen.block "struct periph", separator: true do
-        xml.xpath_nodes("/device/peripherals/*").each do |periph|
-          gen_pdef! xml, periph
-          separator
-        end
-      end
-    end
-
-    @padding_ctr = 0
-
-    def gen_padding!(bytes)
-      width = @width
-
-      while width >= 8
-        break if bytes.divisible_by?((width / 8).to_u64)
-        width /= 2
-      end
-
-      @gen.emit "uint#{width}_t _padding_#{@padding_ctr}[#{(bytes / (width / 8).to_u64).to_u64}]"
-
-      @padding_ctr += 1
-    end
-
-    @interrupts = {} of String => String
-
-    private def mask_for(bits, offset)
-      "0x#{(((1u64 << bits) - 1) << offset).to_s(16)}"
-    end
-
-    alias EnumeratedValue = {name: String, description: String, value: String}
-    @enumerated_values = {} of String => Array(EnumeratedValue)
-
-    private def enumerated_values(periph, reg_name, field_name, enum_v : XML::Node)
-      name_node = enum_v.xpath_node("name")
-
-      name = if name_node.nil?
-               "_anonymous_#{@enumerated_values.size}"
-             else
-               name_node.text
-             end
-
-      fully_qualified_name = "#{reg_name}.#{field_name}.#{name}"
-
-      derived_from = enum_v["derivedFrom"]?
-
-      @enumerated_values[fully_qualified_name] = [] of EnumeratedValue
-
-      unless derived_from.nil?
-        derived_from_bits = derived_from.split('.')
-
-        ancestor_reg_name, ancestor_field_name = reg_name, field_name
-        ancestor_name = derived_from_bits[-1]
-        ancestor_field_name = derived_from_bits[-2] if derived_from_bits.size > 1
-        ancestor_reg_name = derived_from_bits[-3] if derived_from_bits.size > 2
-
-        ancestor_fq_name = [ancestor_reg_name, ancestor_field_name, ancestor_name].join('.')
-
-        derived_values = if @enumerated_values.has_key? ancestor_fq_name
-                           @enumerated_values[ancestor_fq_name]
-                         elsif key = @enumerated_values.keys.find(&.match(/^#{reg_name}\..*\.#{ancestor_name}$/i))
-                           @enumerated_values[key.not_nil!]
-                         else
-                           puts "Warning: enumerated value set #{fully_qualified_name} was declared before its ancestor #{ancestor_fq_name}"
-
-                           ancestor =
-                             periph.xpath_node("//register[name/text()='#{ancestor_reg_name}']/fields/field[name/text()='#{ancestor_field_name}']/enumeratedValues[name/text()='#{ancestor_name}']") ||
-                               periph.xpath_node("//register[name/text()='#{reg_name}']/fields/field/enumeratedValues[name/text()='#{ancestor_name}']")
-
-                           if ancestor.nil?
-                             puts "Warning: ancestor #{derived_from} of enumerated value set #{name} is missing"
-                             [] of EnumeratedValue
-                           else
-                             enumerated_values(periph, ancestor_reg_name, ancestor_field_name, ancestor)
-                           end
-                         end
-
-        @enumerated_values[fully_qualified_name] += derived_values
-      end
-
-      enum_v.xpath_nodes("enumeratedValue").each do |node|
-        @enumerated_values[fully_qualified_name] << EnumeratedValue.new(
-          name: node.xpath_node("name").not_nil!.text,
-          description: node.xpath_node("description").not_nil!.text,
-          value: node.xpath_node("value").not_nil!.text
-        )
-      end
-
-      @enumerated_values[fully_qualified_name]
-    end
-
-    def gen_pdef!(xml, p : XML::Node)
-      name = p.xpath_node("name").not_nil!.text.downcase
-
-      puts "\t\tGenerating peripheral definition for #{name.upcase}"
-
-      derived_from = p["derivedFrom"]?
-
-      interrupts = p.xpath_nodes("self::peripheral/interrupt")
-      interrupts.each do |node|
-        iname = node.xpath_node("name").not_nil!.text
-        @interrupts[iname] = name
-      end
-
-      if @config.features.doxygen
-        @gen.doc do |d|
-          d.generate do
-            desc = p.xpath_node("description")
-            if desc.nil?
-              summary name.upcase
-            else
-              summary desc.text
-            end
-          end
-        end
-      end
-      @gen.g_module name, [(derived_from.nil? ? "silica::periph" : derived_from.downcase)] do
-        base_addr = parse_number(p.xpath_node("baseAddress").not_nil!.text)
-        p.xpath_nodes("self::peripheral/registers/*").each do |reg|
-          orig_reg_name = reg.xpath_node("name").not_nil!.text
-          reg_name = orig_reg_name.downcase
-
-          puts "\t\t\tGenerating info for #{reg_name.upcase}"
-
-          offset = parse_number(reg.xpath_node("addressOffset").not_nil!.text)
-          size = parse_number(reg.xpath_node("size").not_nil!.text)
-
-          traits = generic(path(%w(std hardware static_register_traits)), [(base_addr + offset).to_s])
-
-          if @config.features.doxygen
-            doc do |d|
-              d.generate do
-                d.summary "Values and masks for #{name}.#{reg_name}"
-              end
-            end
-          end
-          g_enum "#{reg_name}_v", "uint#{@width}_t" do
-            reg_enum_values = {} of String => EnumeratedValue
-
-            declared_values = [] of String
-            reg.xpath_nodes("fields/field").each do |field|
-              field_name = field.xpath_node("name").not_nil!.text
-              field_width = parse_number field.xpath_node("bitWidth").not_nil!.text
-              field_offset = parse_number field.xpath_node("bitOffset").not_nil!.text
-              field_desc = field.xpath_node("description")
-
-              if @config.features.field_masks
-                g_enum_member "#{field_name}_msk", mask_for(field_width, field_offset) do
-                  if @config.features.doxygen
-                    doc do |d|
-                      d.generate do
-                        summary "Mask for #{field_name}"
-
-                        field_desc.try do |f|
-                          separator
-                          summary "Field description: #{f.text}"
-                        end
-                      end
-                    end
-                  end
-                end
-              end
-
-              if @config.features.field_offsets
-                g_enum_member "#{field_name}_offset", field_offset.to_s do
-                  if @config.features.doxygen
-                    doc do |d|
-                      d.generate do
-                        summary "Offset of #{field_name}"
-
-                        field_desc.try do |f|
-                          separator
-                          summary "Field description: #{f.text}"
-                        end
-                      end
-                    end
-                  end
-                end
-              end
-
-              if @config.features.field_widths
-                g_enum_member "#{field_name}_width", field_width.to_s do
-                  if @config.features.doxygen
-                    doc do |d|
-                      d.generate do
-                        summary "Width of #{field_name}"
-
-                        field_desc.try do |f|
-                          separator
-                          summary "Field description: #{f.text}"
-                        end
-                      end
-                    end
-                  end
-                end
-              end
-
-              e_values = field.xpath_nodes("enumeratedValues")
-
-              if e_values.empty? && @config.features.auto_enabled_value && field_width == 1
-                value_name = "#{field_name}_Enabled"
-                declared_values << value_name
-                g_enum_member value_name, "(uint#{@width}_t)1 << #{field_offset}" do
-                  doc do |d|
-                    d.generate do
-                      summary "[Autogenerated] Enabled value for #{field_name}"
-                    end
-                  end
-                end
-              end
-
-              e_values.each do |value_set|
-                value_set_name = value_set.xpath_node("name").try(&.text)
-                values = enumerated_values(p, orig_reg_name, field_name, value_set)
-
-                unless value_set_name.nil?
-                  values.each do |value|
-                    reg_enum_values["#{value_set_name}_#{value[:name]}"] = value
-                  end
-                end
-
-                values.each do |value|
-                  value_name = "#{field_name}_#{value[:name]}"
-                  unless declared_values.includes? value_name
-                    declared_values << value_name
-                    g_enum_member(value_name.delete("()"), "(uint#{@width}_t)#{value[:value]} << #{field_offset}") do
-                      if @config.features.doxygen
-                        doc do |d|
-                          d.generate do
-                            summary value[:description]
-                          end
-                        end
-                      end
-                    end
-                  end
-                end
-              end
-            end
-
-            if @config.features.field_common_values
-              reg_enum_values.each do |k, v|
-                unless declared_values.includes? k
-                  g_enum_member(k, v[:value]) do
-                    if @config.features.doxygen
-                      doc do |d|
-                        d.summary v[:description]
-                      end
-                    end
-                  end
-                end
-              end
-            end
-
-            g_enum_member "NONE", "0"
-          end
-
-          separator
-
-          if @config.features.doxygen
-            doc do |d|
-              d.generate do
-                desc = reg.xpath_node("description")
-                summary "Register traits for #{name}.#{reg_name}"
-
-                unless desc.nil?
-                  separator
-                  summary desc.text
-                end
-              end
-            end
-          end
-          g_module "#{reg_name}_traits", [traits] do
-            if size != @width
-              g_alias "value_type", "std::uint#{size}_t"
-            end
-            g_alias "field_type", "#{reg_name}_v"
-          end
-
-          if @config.features.doxygen
-            separator
-
-            doc do |d|
-              d.generate do
-                desc = reg.xpath_node("description")
-                summary "Register access for #{name}.#{reg_name}"
-
-                unless desc.nil?
-                  separator
-                  summary desc.text
-                end
-              end
-            end
-          end
-
-          g_alias escape_keywords(reg_name), generic(path(%w(std hardware register_access)), "#{reg_name}_traits")
-
-          separator
-        end
-
-        separator
-
-        if @config.features.doxygen
-          doc do |d|
-            d.generate do
-              summary "Base address of #{name}"
-            end
-          end
-        end
-        g_constant "std::uint#{@width}_t", "base_address", "0x#{base_addr.to_s(16)}"
-      end
-    end
-
-    # DEPRECATED: Use `Nya::Serializable.parse_number(text, UInt64)`
-    def parse_number(text : String)
-      Nya::Serializable.parse_number(text, UInt64)
     end
   end
 end

@@ -2,7 +2,7 @@ version: 2.0
 shards:
   nya_serializable:
     git: https://github.com/nya-engine/nya_serializable.git
-    version: 0.2.8+git.commit.fa1619c8391a627c42f5511be5d75831e885e28e
+    version: 0.2.8+git.commit.f42ac383ec2c857fe42c4bd870158605c5b925a5
 
   silica_core:
     git: https://github.com/unn4m3d/silica_core.git
